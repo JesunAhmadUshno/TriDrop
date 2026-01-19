@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TriDrop</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #050505;
+            --accent: #CCFF00; /* Balenciaga Acid Green */
+            --text: #F0F0F0;
+        }
+
+        body {
+            background-color: #020202;
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(204, 255, 0, 0.08), transparent 40%),
+                radial-gradient(circle at 80% 10%, rgba(0, 255, 200, 0.06), transparent 35%),
+                radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.04), transparent 40%);
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+            cursor: none; /* Custom cursor handling */
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        #cursor {
+            position: fixed;
+            top: 0; left: 0;
+            width: 20px; height: 20px;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
+            transition: width 0.3s, height 0.3s, background 0.3s;
+        }
+        #cursor.hovered {
+            width: 50px; height: 50px;
+            background: var(--accent);
+            opacity: 0.5;
+            border: none;
+        }
+
+        /* --- NOISE GRAIN --- */
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.07;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        /* --- FLUID BACKGROUND --- */
+        #canvas-wrap {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* --- UTILS --- */
+        .magnetic-btn { display: inline-block; }
+        .grid-bg {
+            background-size: 40px 40px;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+        }
+        
+        .panel-transition {
+            will-change: transform, opacity;
+        }
+
+        /* Silk sheen overlay */
+        .silk-sheen {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(120deg, rgba(255,255,255,0.04), transparent 40%, rgba(255,255,255,0.05));
+            mix-blend-mode: soft-light;
+            opacity: 0.6;
+            z-index: 1;
+        }
+
+        /* Logo mark geometry */
+        .logo-mark {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo-mark svg { width: 100%; height: 100%; }
+        .logo-mark .tri { fill: none; stroke: var(--accent); stroke-width: 1.8; }
+        .logo-mark .sq { fill: rgba(204, 255, 0, 0.08); stroke: var(--accent); stroke-width: 1.5; }
+        .logo-mark .cir { fill: none; stroke: var(--text); stroke-width: 1.3; opacity: 0.7; }
+
+        /* Drop zone visual feedback */
+        #dropZone.dragging {
+            border-color: var(--accent) !important;
+            background-color: rgba(204, 255, 0, 0.08) !important;
+        }
+
+        /* Boot loader */
+        #boot-loader {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 40%, rgba(204,255,0,0.14), transparent 52%), #000000;
+            display: grid;
+            place-items: center;
+            z-index: 200;
+            overflow: hidden;
+        }
+        #boot-loader::after {
+            content: "";
+            position: absolute;
+            inset: -20%;
+            background: radial-gradient(circle at 30% 30%, rgba(204,255,0,0.05), transparent 45%),
+                        radial-gradient(circle at 70% 70%, rgba(0,255,200,0.05), transparent 45%);
+            filter: blur(40px);
+            opacity: 0.8;
+        }
+        #boot-loader .loader-mark {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            filter: drop-shadow(0 0 18px rgba(204,255,0,0.25)) drop-shadow(0 0 26px rgba(0,255,200,0.15));
+        }
+        #boot-loader .loader-mark svg { width: 100%; height: 100%; }
+        #boot-loader .tri { stroke: var(--accent); fill: none; stroke-width: 2.4; stroke-linejoin: round; }
+        #boot-loader .sq { stroke: var(--accent); fill: rgba(204,255,0,0.12); stroke-width: 1.8; }
+        #boot-loader .cir { stroke: #0ff; fill: none; stroke-width: 1.7; opacity: 0.85; }
+        #boot-loader .loader-text {
+            margin-top: 18px;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 0.24em;
+            font-size: 0.82rem;
+            color: #c5ffd6;
+            text-transform: uppercase;
+        }
+
+        /* Hides scrollbar in file list */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* App loading state */
+        body.app-loading nav,
+        body.app-loading main {
+            opacity: 0.25;
+            filter: blur(2px);
+            pointer-events: none;
+        }
+
+        /* Version + attribution */
+        .meta-stack {
+            position: fixed;
+            bottom: 6px;
+            left: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px;
+            color: rgba(255,255,255,0.55);
+            z-index: 30;
+        }
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 999px;
+            background: rgba(0,0,0,0.35);
+            backdrop-filter: blur(8px);
+        }
+        .meta-chip a { color: inherit; text-decoration: none; }
+        .meta-chip a:hover { color: var(--accent); }
+
+        /* Coffee bubble */
+        .coffee-bubble {
+            position: fixed;
+            bottom: 86px;
+            right: 22px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.16), rgba(0,0,0,0.8));
+            box-shadow: 0 12px 24px rgba(0,0,0,0.45), 0 0 18px rgba(204,255,0,0.25);
+            color: #fff;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            transform: translateY(0);
+            animation: floatBob 4s ease-in-out infinite;
+            z-index: 35;
+        }
+        .coffee-icon {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            background: linear-gradient(145deg, rgba(204,255,0,0.25), rgba(0,255,200,0.2));
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.35), 0 0 12px rgba(204,255,0,0.3);
+        }
+        @keyframes floatBob {
+            0%, 100% { transform: translateY(0) rotate(-1deg); }
+            50% { transform: translateY(-10px) rotate(1deg); }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-[#CCFF00] selection:text-black app-loading">
+
+    <div id="boot-loader">
+        <div class="loader-mark">
+            <svg viewBox="0 0 120 120">
+                <polygon class="tri" points="60,12 108,100 12,100" />
+                <rect class="sq" x="32" y="32" width="40" height="40" rx="5" />
+                <circle class="cir" cx="68" cy="68" r="26" />
+            </svg>
+        </div>
+        <div class="loader-text">Calibrating focus</div>
+    </div>
+
+    <div id="cursor"></div>
+    <div class="silk-sheen"></div>
+    <div class="noise"></div>
+    <div id="canvas-wrap"><canvas id="fluid"></canvas></div>
+
+    <nav class="fixed top-0 w-full p-6 flex justify-between items-center z-40 mix-blend-difference">
+        <div class="flex items-center gap-3 text-xl font-bold tracking-tighter hover-trigger" data-cursor="hovered">
+            <span class="logo-mark" aria-hidden="true">
+                <svg viewBox="0 0 100 100">
+                    <polygon class="tri" points="50,10 90,80 10,80" />
+                    <rect class="sq" x="22" y="22" width="40" height="40" rx="4" />
+                    <circle class="cir" cx="55" cy="55" r="24" />
+                </svg>
+            </span>
+            <span>TriDrop</span>
+        </div>
+        <div id="status-indicator" class="flex items-center gap-2 text-xs font-mono uppercase opacity-70">
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" id="status-dot"></div>
+            <span id="status-text">DISCONNECTED</span>
+        </div>
+    </nav>
+
+    <main class="relative w-full min-h-screen flex flex-col justify-center items-center p-6 md:p-10 gap-12">
+
+        <div id="view-landing" class="panel-transition w-full flex flex-col justify-center items-center text-center gap-8 pt-10">
+            <h1 id="heroWord" class="text-[9vw] md:text-[7vw] leading-[0.9] font-bold tracking-tighter mix-blend-overlay opacity-25 pointer-events-none select-none">
+                SHARE
+            </h1>
+            
+            <div class="z-10 flex flex-col gap-6 items-center w-full max-w-lg">
+                <button onclick="createRoom()" class="hover-trigger group relative px-8 py-4 bg-transparent border border-white/20 overflow-hidden transition-all duration-300 hover:border-[#CCFF00] w-full" data-cursor="hovered">
+                    <div class="absolute inset-0 bg-[#CCFF00] translate-y-[101%] group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                    <span class="relative font-bold text-lg tracking-widest group-hover:text-black transition-colors">INITIATE HOST</span>
+                </button>
+
+                <div class="flex gap-3 w-full items-center">
+                    <input type="text" id="joinInput" placeholder="ENTER COORDS (ID)" 
+                        class="hover-trigger flex-1 bg-white/5 border border-white/10 p-4 text-center text-white placeholder-white/30 focus:border-[#CCFF00] focus:bg-black transition-all outline-none font-mono text-sm uppercase rounded"
+                        data-cursor="hovered">
+                    <button onclick="joinRoom(document.getElementById('joinInput').value)" 
+                        class="hover-trigger px-6 py-4 border border-white/10 rounded hover:bg-white hover:text-black transition-all" data-cursor="hovered">
+                        →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-room" class="panel-transition w-full flex flex-col justify-center items-center hidden opacity-0 translate-y-20 gap-6 pt-14">
+            
+            <div id="qr-wrapper" class="hidden p-4 bg-white hover-trigger transition-transform hover:scale-105 rounded" data-cursor="hovered">
+                <div id="qrcode"></div>
+            </div>
+
+            <div id="dropZone" class="w-full max-w-2xl h-64 border-2 border-dashed border-white/20 flex flex-col justify-center items-center hover:border-[#CCFF00] hover:bg-[#CCFF00]/5 transition-all duration-500 cursor-pointer group relative overflow-hidden rounded-lg" onclick="document.getElementById('fileInput').click()">
+                <div class="absolute inset-0 flex justify-center items-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span class="text-[10rem] text-[#CCFF00]/10 font-bold">+</span>
+                </div>
+                <p class="font-mono text-sm text-white/50 group-hover:text-[#CCFF00] transition-colors z-10">DROP FILES // TOUCH TO SELECT</p>
+                <input type="file" id="fileInput" multiple class="hidden">
+            </div>
+
+            <div id="fileList" class="w-full max-w-2xl mt-2 h-44 overflow-y-auto no-scrollbar font-mono text-sm space-y-2 px-1">
+            </div>
+            
+            <button onclick="copyLink()" class="mt-8 text-xs font-mono text-white/40 hover:text-[#CCFF00] transition-colors uppercase tracking-widest hover-trigger" data-cursor="hovered">
+                [ COPY SECURE LINK ]
+            </button>
+        </div>
+
+    </main>
+
+    <div class="meta-stack">
+        <span class="meta-chip">TriDrop v1</span>
+        <span class="meta-chip">© <a href="https://jesunahmadushno.com" target="_blank" rel="noreferrer">Jesun Ahmad Ushno</a></span>
+    </div>
+
+    <div class="fixed bottom-6 right-6 font-mono text-[10px] text-white/30 border border-white/10 px-2 py-1 rounded">
+        SECURE // P2P // E2E
+    </div>
+
+    <a class="coffee-bubble hover-trigger" href="https://buymeacoffee.com/jesun" target="_blank" rel="noreferrer" data-cursor="hovered">
+        <span class="coffee-icon">☕</span>
+        <span style="display:flex; flex-direction:column; line-height:1.1;">
+            <strong style="font-size:13px; letter-spacing:0.04em;">Buy me a coffee</strong>
+            <span style="font-size:12px; color:rgba(255,255,255,0.7);">💛 keep TriDrop flowing</span>
+        </span>
+    </a>
+
+    <script>
+        // --- 1. MOTION SYSTEM (GSAP) ---
+        const cursor = document.getElementById('cursor');
+        const bootLoader = document.getElementById('boot-loader');
+
+        // Setup Custom Cursor
+        document.addEventListener('mousemove', (e) => {
+            gsap.to(cursor, { x: e.clientX, y: e.clientY, duration: 0.1, ease: "power2.out" });
+        });
+
+        // Hover Effects
+        document.querySelectorAll('.hover-trigger').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+        // Loader animation loop (shapes play together)
+        const loaderLoop = gsap.timeline({ repeat: -1, defaults: { ease: "power2.inOut" } });
+        loaderLoop
+            .to("#boot-loader .tri", { rotate: 18, scale: 1.06, x: 4, y: -4, duration: 0.9, transformOrigin: "50% 60%" })
+            .to("#boot-loader .sq", { rotate: -16, x: -6, y: 6, duration: 0.9, transformOrigin: "50% 50%" }, "<")
+            .to("#boot-loader .cir", { scale: 1.14, duration: 0.9, transformOrigin: "50% 50%" }, "<")
+            .to("#boot-loader .tri", { rotate: -14, scale: 1.04, x: -6, y: 5, duration: 0.9, transformOrigin: "50% 60%" })
+            .to("#boot-loader .sq", { rotate: 14, x: 5, y: -4, duration: 0.9, transformOrigin: "50% 50%" }, "<")
+            .to("#boot-loader .cir", { scale: 0.96, duration: 0.9, transformOrigin: "50% 50%" }, "<")
+            .to("#boot-loader .loader-text", { opacity: 0.4, duration: 0.6 }, "<")
+            .to("#boot-loader .loader-text", { opacity: 1, duration: 0.6 })
+            .to("#boot-loader .loader-mark", { rotate: 12, duration: 0.9, ease: "sine.inOut" }, "-=0.8")
+            .to("#boot-loader .loader-mark", { rotate: -8, duration: 0.9, ease: "sine.inOut" });
+
+        // Intro Animation
+        function revealApp() {
+            gsap.to("#boot-loader", { autoAlpha: 0, duration: 0.8, ease: "power2.inOut", onComplete: () => {
+                loaderLoop.pause(0);
+                bootLoader.style.display = "none";
+            }});
+            gsap.to(["nav", "#view-landing"], { opacity: 1, filter: "blur(0px)", duration: 0.8, ease: "power2.out" });
+            document.body.classList.remove('app-loading');
+        }
+
+        // Hero word loop
+        function startHeroLoop() {
+            const hero = document.getElementById('heroWord');
+            const words = ["SCAN", "JOIN", "SHARE"];
+            const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.6 });
+
+            words.forEach((word) => {
+                tl.to(hero, { opacity: 0, y: 30, duration: 0.35, ease: "power2.in" });
+                tl.set(hero, { textContent: word, y: -30, rotationX: -40 });
+                tl.to(hero, { opacity: 1, y: 0, rotationX: 0, duration: 0.55, ease: "back.out(1.6)" });
+                tl.to(hero, { scale: 1.02, duration: 0.4, ease: "sine.inOut" });
+            });
+        }
+
+        // Delay reveal slightly for serenity
+        setTimeout(() => {
+            gsap.from("#view-landing h1", { y: 100, opacity: 0, duration: 1.2, ease: "expo.out" });
+            gsap.from("#view-landing .z-10", { y: 50, opacity: 0, duration: 1.2, ease: "expo.out", delay: 0.1 });
+            startHeroLoop();
+            revealApp();
+        }, 1100);
+
+        // View Transition
+        function transitionToRoom() {
+            const tl = gsap.timeline();
+            tl.to("#view-landing", { y: -50, opacity: 0, duration: 0.8, ease: "power4.in", onComplete: () => {
+                document.getElementById('view-landing').classList.add('hidden');
+                document.getElementById('view-room').classList.remove('hidden');
+            }})
+            .to("#view-room", { y: 0, opacity: 1, duration: 1, ease: "expo.out" });
+        }
+
+        // --- 2. FILE TRANSFER LOGIC (PeerJS) ---
+        let peer = null;
+        let connections = [];
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+
+        function initPeer(id = null) {
+            updateStatus("INITIALIZING NODE...", "yellow");
+            peer = new Peer(id, { debug: 1 });
+
+            peer.on('open', (myId) => {
+                updateStatus("NODE ACTIVE", "green");
+                
+                // If Host
+                if(!id) {
+                    const url = `${window.location.href.split('#')[0]}#${myId}`;
+                    const qrDiv = document.getElementById("qrcode");
+                    qrDiv.innerHTML = "";
+                    new QRCode(qrDiv, { text: url, width: 128, height: 128 });
+                    document.getElementById("qr-wrapper").classList.remove("hidden");
+                }
+            });
+
+            peer.on('connection', (conn) => {
+                handleConn(conn);
+                gsap.to("body", { backgroundColor: "#0a0a0a", duration: 0.5 }); // Subtle visual feedback
+                document.getElementById("qr-wrapper").classList.add("hidden");
+            });
+        }
+
+        function createRoom() {
+            transitionToRoom();
+            initPeer();
+        }
+
+        function joinRoom(id) {
+            if(!id) return;
+            transitionToRoom();
+            initPeer();
+            peer.on('open', () => {
+                const conn = peer.connect(id);
+                handleConn(conn);
+            });
+        }
+
+        function handleConn(conn) {
+            connections.push(conn);
+            conn.on('open', () => {
+                updateStatus("LINK SECURED", "#CCFF00");
+                // "React" effect on connection
+                gsap.fromTo("body", { filter: "invert(1)" }, { filter: "invert(0)", duration: 0.5 });
+            });
+            conn.on('data', (data) => {
+                if(data.file) {
+                    const blob = new Blob([data.file], { type: data.type });
+                    const url = URL.createObjectURL(blob);
+                    addFileUI(data.name, url, true);
+                }
+            });
+        }
+
+        // --- 3. FILE HANDLING ---
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragging');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragging');
+            if (e.dataTransfer?.files?.length) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        function handleFiles(files) {
+            for(let f of files) {
+                connections.forEach(c => c.send({ file: f, name: f.name, type: f.type }));
+                addFileUI(f.name, null, false);
+            }
+        }
+
+        function addFileUI(name, url, isIncoming) {
+            const list = document.getElementById('fileList');
+            const item = document.createElement('div');
+            item.className = "flex justify-between items-center p-3 border border-white/5 bg-white/5 hover:bg-white/10 transition-colors";
+            
+            item.innerHTML = `
+                <span class="truncate w-2/3">${isIncoming ? '↓' : '↑'} ${name}</span>
+                ${isIncoming ? `<a href="${url}" download="${name}" class="text-[#CCFF00] hover:underline">SAVE</a>` : '<span class="opacity-50">SENT</span>'}
+            `;
+            list.prepend(item);
+            
+            // Animate Item In
+            gsap.from(item, { x: -20, opacity: 0, duration: 0.5, ease: "power2.out" });
+        }
+
+        function updateStatus(text, color) {
+            const t = document.getElementById('status-text');
+            const d = document.getElementById('status-dot');
+            t.innerText = text;
+            d.style.backgroundColor = color === "green" || color === "#CCFF00" ? "#CCFF00" : (color === "yellow" ? "#FFFF00" : "#FF0000");
+            
+            if(color === "#CCFF00") {
+                d.classList.remove("animate-pulse");
+                d.style.boxShadow = "0 0 10px #CCFF00";
+            }
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href);
+            const btn = document.querySelector("button[onclick='copyLink()']");
+            const original = btn.innerText;
+            btn.innerText = "[ COPIED ]";
+            setTimeout(() => btn.innerText = original, 2000);
+        }
+
+        // Auto-Join
+        if(window.location.hash) {
+            setTimeout(() => joinRoom(window.location.hash.substring(1)), 1000);
+        }
+
+        // --- 4. FLUID CANVAS (Visual Candy) ---
+        // Simple particle drift to match "Ethereal" request
+        const canvas = document.getElementById('fluid');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x < 0) this.x = width;
+                if(this.x > width) this.x = 0;
+                if(this.y < 0) this.y = height;
+                if(this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for(let i=0; i<50; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>

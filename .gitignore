@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Builds and caches
+dist/
+build/
+.parcel-cache/
+.cache/
+.next/
+out/
+
+# Env / secrets
+.env
+.env.*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+
+# Coverage / reports
+coverage/
