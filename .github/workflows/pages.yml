@@ -1,0 +1,53 @@
+name: Pages
+
+# Publishes the TriDrop app at / (root index.html, untouched) and the dashboard built from site/ at /dashboard/.
+# Replaces the legacy branch build: set Settings > Pages > Source to "GitHub Actions" when this lands.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm test
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+      - name: Assemble app + dashboard
+        run: |
+          mkdir -p _site/dashboard
+          cp index.html _site/index.html
+          cp -r site/dist/. _site/dashboard/
+          test -f _site/index.html && test -f _site/dashboard/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
