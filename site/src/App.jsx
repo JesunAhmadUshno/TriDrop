@@ -444,7 +444,9 @@ function Security() {
 function Roadmap() {
   const pill = { done: ['good', 'Done'], open: ['bad', 'Open'], replaced: ['info', 'Replaced by PeerJS cloud'], unknown: ['warn', 'Not scanned'] };
   const fixes = [
-    ['Escape the filename', 'Build the file row with createElement + textContent. A few lines, removes the XSS.'],
+    S.security.filenameInnerHTML
+      ? ['Escape the filename', 'Build the file row with createElement + textContent. A few lines, removes the XSS.']
+      : ['Filename escaped', 'Done: addFileUI builds the row with createElement + textContent, so a peer’s file name is never parsed as HTML.'],
     ['Honest feature list', 'README now splits “Implemented in v1” from “Planned”, and explains the E2E badge.'],
     ['Per-chunk SHA-256', 'Slice with File.slice, hash each chunk with crypto.subtle, send hashes ahead of data; the loopback lab above is a working sketch.'],
     ['Progress + backpressure', 'Watch bufferedAmount and bufferedamountlow, as the loopback lab does, and show a progress bar.'],

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node src/transfer.check.mjs && node src/app.smoke.mjs",
+    "test": "node src/transfer.check.mjs && node src/app.smoke.mjs && node src/app.behavior.mjs",
     "build": "node src/transfer.check.mjs && vite build",
     "preview": "vite preview"
   },

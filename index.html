@@ -487,10 +487,23 @@
             const item = document.createElement('div');
             item.className = "flex justify-between items-center p-3 border border-white/5 bg-white/5 hover:bg-white/10 transition-colors";
             
-            item.innerHTML = `
-                <span class="truncate w-2/3">${isIncoming ? '↓' : '↑'} ${name}</span>
-                ${isIncoming ? `<a href="${url}" download="${name}" class="text-[#CCFF00] hover:underline">SAVE</a>` : '<span class="opacity-50">SENT</span>'}
-            `;
+            // The name comes from the remote peer: set it as text only, never as HTML.
+            const label = document.createElement('span');
+            label.className = "truncate w-2/3";
+            label.textContent = `${isIncoming ? '↓' : '↑'} ${name}`;
+            let action;
+            if (isIncoming) {
+                action = document.createElement('a');
+                action.href = url;
+                action.download = name;
+                action.className = "text-[#CCFF00] hover:underline";
+                action.textContent = "SAVE";
+            } else {
+                action = document.createElement('span');
+                action.className = "opacity-50";
+                action.textContent = "SENT";
+            }
+            item.append(label, action);
             list.prepend(item);
             
             // Animate Item In
