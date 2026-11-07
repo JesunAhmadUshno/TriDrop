@@ -1,5 +1,9 @@
 # TriDrop — Effortless Cross‑Share Between iPhone and Windows
 
+Live app: https://jesunahmadushno.github.io/TriDrop/
+
+Live dashboard: https://jesunahmadushno.github.io/TriDrop/dashboard/ (checks the app against this README, with a same-device DataChannel transfer lab)
+
 Tons of GBs across devices shouldn’t be painful. While I use an iPhone, Windows file sharing often makes me go crazy. I vibecoded this small project to make cross‑sharing simple: anyone can share files peer‑to‑peer (or via a relay fallback) by just connecting devices on the same network or over the internet with a one‑time code or QR.
 
 ## What Is TriDrop?
@@ -78,13 +82,24 @@ sequenceDiagram
 - Harden with encryption and configurable retention (delete session after transfer).
 
 ## Features
-- Cross‑device sharing (iPhone ↔ Windows and more)
-- QR/connect code pairing
-- P2P by default, TURN/relay fallback
-- Large file support with chunking and resume attempts
+
+### Implemented in v1 (`index.html`)
+- Peer-to-peer transfer over WebRTC DataChannels via PeerJS 1.5.2, using the public PeerJS cloud server for signaling
+- QR code or ID pairing (`#id` links auto-join)
+- Drag-and-drop or picker, multi-file send to every connected peer
+- Save received files from the list
+- Transport encryption: WebRTC encrypts every DataChannel with DTLS. The "E2E" badge in the app means this; there is no extra app-layer encryption or key verification yet.
+
+### Planned (not in the code yet)
+- Cross‑device testing matrix (iPhone ↔ Windows and more)
+- App-level chunking with per-chunk SHA‑256 integrity and resume
 - Transfer progress, cancel/retry
+- TURN/relay fallback (only default STUN today)
+- Optional app-layer end‑to‑end encryption
 - Optional link expiration and auto‑cleanup
 - PWA installable experience on mobile
+
+The sections above on how it works and the flowcharts describe the target design. The dashboard's claims audit shows which parts exist in `index.html` today.
 
 ## Local Development
 
@@ -96,6 +111,12 @@ python -m http.server 5500 -b 127.0.0.1
 
 # Option 2: VS Code Live Server extension
 # Click "Go Live" in the status bar
+```
+
+Dashboard checks (no install needed for the app itself):
+
+```bash
+cd site && npm ci && npm test && npm run build
 ```
 
 ## Roadmap
