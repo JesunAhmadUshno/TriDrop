@@ -399,6 +399,7 @@
         // --- 2. FILE TRANSFER LOGIC (PeerJS) ---
         let peer = null;
         let connections = [];
+        let shareUrl = null; // url#hostId: what the QR encodes and COPY SECURE LINK copies
         const fileInput = document.getElementById('fileInput');
         const dropZone = document.getElementById('dropZone');
 
@@ -411,7 +412,7 @@
                 
                 // If Host
                 if(!id) {
-                    const url = `${window.location.href.split('#')[0]}#${myId}`;
+                    const url = shareUrl = `${window.location.href.split('#')[0]}#${myId}`;
                     const qrDiv = document.getElementById("qrcode");
                     qrDiv.innerHTML = "";
                     new QRCode(qrDiv, { text: url, width: 128, height: 128 });
@@ -433,6 +434,7 @@
 
         function joinRoom(id) {
             if(!id) return;
+            shareUrl = `${window.location.href.split('#')[0]}#${id}`;
             transitionToRoom();
             initPeer();
             peer.on('open', () => {
@@ -523,11 +525,15 @@
             }
         }
 
-        function copyLink() {
-            navigator.clipboard.writeText(window.location.href);
+        async function copyLink() {
             const btn = document.querySelector("button[onclick='copyLink()']");
             const original = btn.innerText;
-            btn.innerText = "[ COPIED ]";
+            try {
+                await navigator.clipboard.writeText(shareUrl || window.location.href);
+                btn.innerText = "[ COPIED ]";
+            } catch (e) {
+                btn.innerText = "[ COPY FAILED ]";
+            }
             setTimeout(() => btn.innerText = original, 2000);
         }
 

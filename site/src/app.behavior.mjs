@@ -107,6 +107,23 @@ test('TD-2: received data is saved as an opaque download, never with the peer-ch
   assert.equal(app.blobs[0].type, 'application/octet-stream');
 });
 
+test('TD-3: COPY SECURE LINK on the host copies the room link the QR encodes', async () => {
+  const app = boot();
+  app.run('createRoom()');
+  app.peers[0].emit('open', 'host-1');
+  await app.run('copyLink()');
+  assert.deepEqual(app.clipboard, ['https://example.test/TriDrop/#host-1']);
+  assert.equal(app.els('qrcode').qrText, app.clipboard[0]);
+});
+
+test('TD-3: a failed clipboard write is not reported as COPIED', async () => {
+  const app = boot({ clipboardFails: true });
+  app.run('createRoom()');
+  app.peers[0].emit('open', 'host-1');
+  await app.run('copyLink()');
+  assert.notEqual(app.copyBtn.innerText, '[ COPIED ]');
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.log(`FAIL ${name}\n     ${e.message}`); }
