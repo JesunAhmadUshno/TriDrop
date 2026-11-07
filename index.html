@@ -303,6 +303,7 @@
             <button onclick="copyLink()" class="mt-8 text-xs font-mono text-white/40 hover:text-[#CCFF00] transition-colors uppercase tracking-widest hover-trigger" data-cursor="hovered">
                 [ COPY SECURE LINK ]
             </button>
+            <a id="backLink" href="./" class="hidden text-xs font-mono text-[#FF0000] hover:underline uppercase tracking-widest">[ BACK TO START ]</a>
         </div>
 
     </main>
@@ -403,15 +404,16 @@
         const fileInput = document.getElementById('fileInput');
         const dropZone = document.getElementById('dropZone');
 
-        function initPeer(id = null) {
+        function initPeer(isHost) {
             updateStatus("INITIALIZING NODE...", "yellow");
-            peer = new Peer(id, { debug: 1 });
+            peer = new Peer(null, { debug: 1 });
+            peer.on('error', showError);
 
             peer.on('open', (myId) => {
                 updateStatus("NODE ACTIVE", "green");
                 
                 // If Host
-                if(!id) {
+                if(isHost) {
                     const url = shareUrl = `${window.location.href.split('#')[0]}#${myId}`;
                     const qrDiv = document.getElementById("qrcode");
                     qrDiv.innerHTML = "";
@@ -429,14 +431,14 @@
 
         function createRoom() {
             transitionToRoom();
-            initPeer();
+            initPeer(true);
         }
 
         function joinRoom(id) {
             if(!id) return;
             shareUrl = `${window.location.href.split('#')[0]}#${id}`;
             transitionToRoom();
-            initPeer();
+            initPeer(false);
             peer.on('open', () => {
                 const conn = peer.connect(id);
                 handleConn(conn);
@@ -446,6 +448,10 @@
         function handleConn(conn) {
             connections.push(conn);
             conn.on('close', () => { connections = connections.filter(c => c !== conn); });
+            conn.on('error', (err) => {
+                connections = connections.filter(c => c !== conn);
+                showError(err);
+            });
             conn.on('open', () => {
                 updateStatus("LINK SECURED", "#CCFF00");
                 // "React" effect on connection
@@ -526,6 +532,12 @@
                 d.classList.remove("animate-pulse");
                 d.style.boxShadow = "0 0 10px #CCFF00";
             }
+        }
+
+        // Peer or link failure (wrong or stale room ID, signaling down): say so and offer a way back.
+        function showError(err) {
+            updateStatus(err && err.type === 'peer-unavailable' ? "PEER NOT FOUND" : `ERROR: ${(err && err.type) || 'UNKNOWN'}`, "red");
+            document.getElementById('backLink').classList.remove('hidden');
         }
 
         async function copyLink() {

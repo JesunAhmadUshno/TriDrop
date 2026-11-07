@@ -69,7 +69,7 @@ export function scan(html, readme) {
   const security = {
     filenameInnerHTML: nameInHtml, // remote peer's file name interpolated into innerHTML
     downloadAttr: at(/download="\$\{name\}"/),
-    peerDefaultCloud: at(/new Peer\(id, \{ debug: 1 \}\)/), // no host/key option: PeerJS public cloud signaling
+    peerDefaultCloud: at(/new Peer\([^,)]*, \{ debug: 1 \}\)/), // no host/key option: PeerJS public cloud signaling
     acceptsAll: at(/peer\.on\('connection'/),
     wholeBlob: at(/new Blob\(\[data\.file\]/),
     sendWhole: at(/c\.send\(\{ file: f/),

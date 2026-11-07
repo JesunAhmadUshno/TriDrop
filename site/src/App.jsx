@@ -256,10 +256,10 @@ function Loopback() {
 
 const STEPS = [
   { fn: 'createRoom', t: 'Host clicks Create', d: 'Switches to the room view and starts a peer with no ID, so the PeerJS cloud server assigns one.' },
-  { fn: 'initPeer', t: 'Register with PeerJS cloud', d: 'new Peer() opens a WebSocket to the public PeerJS server. On open, the host turns page-url#id into a QR code. On an incoming connection it hands off to handleConn and accepts it without any check.' },
+  { fn: 'initPeer', t: 'Register with PeerJS cloud', d: 'new Peer() opens a WebSocket to the public PeerJS server. On open, the host turns page-url#id into a QR code. On an incoming connection it hands off to handleConn and accepts it without any check. A peer error (such as a wrong room ID) shows PEER NOT FOUND and a way back.' },
   { fn: 'joinRoom', t: 'Guest scans the QR or types the ID', d: 'Opening url#id auto-joins after one second. The guest registers its own peer, then calls peer.connect(id); PeerJS relays the offer, answer and ICE candidates.' },
-  { fn: 'handleConn', t: 'DataChannel opens on both sides', d: 'On open the status reads LINK SECURED. On data, the whole received file becomes one Blob and an object URL for the SAVE link.' },
-  { fn: 'handleFiles', t: 'Send each dropped file', d: 'Each file goes to every connection as one {file, name, type} message. PeerJS’s binary serializer splits it into packets internally; the app has no chunking, progress or backpressure of its own.' },
+  { fn: 'handleConn', t: 'DataChannel opens on both sides', d: 'On open the status reads LINK SECURED. On data, the whole received file becomes one Blob, typed application/octet-stream whatever the sender claims, and an object URL for the SAVE link. Closed or failed connections are dropped.' },
+  { fn: 'handleFiles', t: 'Send each dropped file', d: 'Each file goes to every open connection as one {file, name, type} message; with none open the row says NOT SENT. PeerJS’s binary serializer splits it into packets internally; the app has no chunking, progress or backpressure of its own.' },
   { fn: 'addFileUI', t: 'List the file', d: 'Adds a row with a SAVE link. The remote peer’s file name is interpolated into innerHTML and the download attribute (see Security).' },
 ].map((s) => ({ ...s, src: extractFunction(appHtml, s.fn) }));
 

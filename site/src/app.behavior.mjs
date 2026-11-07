@@ -165,6 +165,33 @@ test('TD-4: a closed connection is dropped, so later files are not shown as SENT
   assert.doesNotMatch(lastRowStatus(app), /(?<!NOT )\bSENT\b/);
 });
 
+test('TD-5: joining a room ID that does not exist shows PEER NOT FOUND and a way back', () => {
+  const app = boot({ hash: '#doesnotexist123' });
+  app.run("joinRoom('doesnotexist123')");
+  const guest = app.peers[0];
+  guest.emit('open', 'guest-1');
+  assert.equal(guest.outgoing.peer, 'doesnotexist123');
+  assert.equal(app.els('qrcode').qrText, undefined, 'a guest does not show its own QR');
+  app.els('backLink').classList.add('hidden'); // as in the markup
+  guest.emit('error', Object.assign(new Error('Could not connect to peer doesnotexist123'), { type: 'peer-unavailable' }));
+  assert.match(app.els('status-text').innerText, /PEER NOT FOUND/);
+  assert.ok(!app.els('backLink').classList.contains('hidden'), 'back link shown');
+  assert.match(html, /id="backLink"[^>]*href="\.\/"/, 'back link returns to the landing page');
+});
+
+test('TD-5: a connection error is reported and the connection dropped', () => {
+  const app = boot();
+  app.run('createRoom()');
+  const host = app.peers[0];
+  host.emit('open', 'host-1');
+  const conn = host.connect('guest');
+  host.emit('connection', conn);
+  conn.open = true; conn.emit('open');
+  conn.emit('error', Object.assign(new Error('boom'), { type: 'connection' }));
+  assert.match(app.els('status-text').innerText, /ERROR/);
+  assert.equal(app.run('connections.length'), 0);
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.log(`FAIL ${name}\n     ${e.message}`); }
