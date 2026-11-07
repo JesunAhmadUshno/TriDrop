@@ -124,6 +124,47 @@ test('TD-3: a failed clipboard write is not reported as COPIED', async () => {
   assert.notEqual(app.copyBtn.innerText, '[ COPIED ]');
 });
 
+const lastRowStatus = (app) => app.text(app.els('fileList').children[0]);
+const file = (name) => ({ name, type: 'text/plain' });
+
+test('TD-4: a file dropped before anyone joins is not shown as SENT', () => {
+  const app = boot();
+  app.run('createRoom()');
+  app.peers[0].emit('open', 'host-1');
+  app.ctx.handleFiles([file('a.txt')]);
+  assert.doesNotMatch(lastRowStatus(app), /(?<!NOT )\bSENT\b/);
+});
+
+test('TD-4: a file dropped before the connection opens is not shown as SENT', () => {
+  const app = boot();
+  app.run('createRoom()');
+  const host = app.peers[0];
+  host.emit('open', 'host-1');
+  const conn = host.connect('guest'); // fake Conn, open === false until 'open'
+  host.emit('connection', conn);
+  app.ctx.handleFiles([file('a.txt')]);
+  assert.equal(conn.sent.length, 0);
+  assert.doesNotMatch(lastRowStatus(app), /(?<!NOT )\bSENT\b/);
+  conn.open = true; conn.emit('open');
+  app.ctx.handleFiles([file('b.txt')]);
+  assert.equal(conn.sent.length, 1);
+  assert.match(lastRowStatus(app), /(?<!NOT )\bSENT\b/);
+});
+
+test('TD-4: a closed connection is dropped, so later files are not shown as SENT', () => {
+  const app = boot();
+  app.run('createRoom()');
+  const host = app.peers[0];
+  host.emit('open', 'host-1');
+  const conn = host.connect('guest');
+  host.emit('connection', conn);
+  conn.open = true; conn.emit('open');
+  conn.close();
+  assert.equal(app.run('connections.length'), 0);
+  app.ctx.handleFiles([file('a.txt')]);
+  assert.doesNotMatch(lastRowStatus(app), /(?<!NOT )\bSENT\b/);
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.log(`FAIL ${name}\n     ${e.message}`); }

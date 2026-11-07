@@ -445,6 +445,7 @@
 
         function handleConn(conn) {
             connections.push(conn);
+            conn.on('close', () => { connections = connections.filter(c => c !== conn); });
             conn.on('open', () => {
                 updateStatus("LINK SECURED", "#CCFF00");
                 // "React" effect on connection
@@ -480,12 +481,14 @@
 
         function handleFiles(files) {
             for(let f of files) {
-                connections.forEach(c => c.send({ file: f, name: f.name, type: f.type }));
-                addFileUI(f.name, null, false);
+                // Only open connections can carry data; PeerJS silently drops sends on the rest.
+                const open = connections.filter(c => c.open);
+                open.forEach(c => c.send({ file: f, name: f.name, type: f.type }));
+                addFileUI(f.name, null, false, open.length > 0);
             }
         }
 
-        function addFileUI(name, url, isIncoming) {
+        function addFileUI(name, url, isIncoming, sent) {
             const list = document.getElementById('fileList');
             const item = document.createElement('div');
             item.className = "flex justify-between items-center p-3 border border-white/5 bg-white/5 hover:bg-white/10 transition-colors";
@@ -503,8 +506,8 @@
                 action.textContent = "SAVE";
             } else {
                 action = document.createElement('span');
-                action.className = "opacity-50";
-                action.textContent = "SENT";
+                action.className = sent ? "opacity-50" : "text-[#FF0000]";
+                action.textContent = sent ? "SENT" : "NOT SENT: NO PEER";
             }
             item.append(label, action);
             list.prepend(item);
