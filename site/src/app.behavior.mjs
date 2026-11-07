@@ -95,6 +95,18 @@ test('TD-1: a peer-supplied file name is shown as text, never parsed as HTML', (
   assert.equal(link.download, evil, 'download name set as a property');
 });
 
+test('TD-2: received data is saved as an opaque download, never with the peer-chosen MIME type', () => {
+  const app = boot();
+  app.run('createRoom()');
+  const host = app.peers[0];
+  host.emit('open', 'host-1');
+  const conn = Object.assign(new Emitter(), { open: true, send() {} });
+  host.emit('connection', conn);
+  conn.emit('data', { file: new TextEncoder().encode('<script>alert(1)</script>'), name: 'a.txt', type: 'text/html' });
+  assert.equal(app.blobs.length, 1);
+  assert.equal(app.blobs[0].type, 'application/octet-stream');
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log(`ok   ${name}`); } catch (e) { failed++; console.log(`FAIL ${name}\n     ${e.message}`); }

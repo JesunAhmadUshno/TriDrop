@@ -450,7 +450,8 @@
             });
             conn.on('data', (data) => {
                 if(data.file) {
-                    const blob = new Blob([data.file], { type: data.type });
+                    // Ignore the peer's MIME type: a text/html blob: URL would run as our origin if opened.
+                    const blob = new Blob([data.file], { type: 'application/octet-stream' });
                     const url = URL.createObjectURL(blob);
                     addFileUI(data.name, url, true);
                 }
