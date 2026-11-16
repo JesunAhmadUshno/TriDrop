@@ -72,7 +72,7 @@ function Range({ label, value, min, max, step, onChange, show }) {
 export default function App() {
   useReveal();
   return (
-    <div className="wrap">
+    <div className="wrap"><a className="skip" href="#top">Skip to content</a>
       <MenuBar />
       <div className="glow" aria-hidden="true" />
       <Hero />
@@ -86,14 +86,14 @@ export default function App() {
       <footer>
         Every count, verdict and line number on this page is computed from <code>index.html</code> and <code>README.md</code> at build time.
         Loopback results are measured live in your browser and never leave it. MIT licence.
-      </footer>
+      <nav className="support" aria-label="Support this work"><a href="https://github.com/sponsors/JesunAhmadUshno">Sponsor this work</a><a href="https://github.com/sponsors/JesunAhmadUshno">Donate</a><a href="https://buymeacoffee.com/jesun">Buy Me a Coffee</a><a href="https://calendly.com/jesunahmadushno/30min">Work with me</a></nav></footer>
     </div>
   );
 }
 
 function Hero() {
   return (
-    <header className="card hero window" id="top" data-title="TriDrop — README.md">
+    <header className="card hero window" id="top" data-title="TriDrop - README.md">
       <div className="head">
         <p className="eyebrow">Product audit · static scan + live lab</p>
         <span className="pill warn">● {S.implementedClaims} of {S.claimed} README features found in code</span>
@@ -189,7 +189,7 @@ function Loopback() {
   const busy = state.phase === 'running' || state.phase === 'reading';
   const r = state.r;
   return (
-    <section id="loopback" className="card window reveal" data-title="loopback.webrtc — live, same device">
+    <section id="loopback" className="card window reveal" data-title="loopback.webrtc - live, same device">
       <div className="head">
         <div>
           <p className="eyebrow">Live lab · runs only when you click</p>
@@ -267,7 +267,7 @@ function Pairing() {
   const [i, setI] = useState(0);
   const s = STEPS[i];
   return (
-    <section id="pairing" className="card window reveal" data-title="pairing.flow — index.html">
+    <section id="pairing" className="card window reveal" data-title="pairing.flow - index.html">
       <div className="head">
         <div>
           <p className="eyebrow">Interactive walkthrough · no network calls</p>
@@ -315,7 +315,7 @@ function Planner() {
   const W = 460, rowH = 34, H = opts.length * rowH + 26, l = 70, r = 70;
   const x = (t) => l + (t / maxT) * (W - l - r);
   return (
-    <section id="planner" className="card window reveal" data-title="chunk-planner.calc — model">
+    <section id="planner" className="card window reveal" data-title="chunk-planner.calc - model">
       <p className="eyebrow">Calculator · a model, not a measurement</p>
       <h2>How chunk size, link speed and per-chunk ACKs change a transfer.</h2>
       <p className="sub">
@@ -368,7 +368,7 @@ function Audit() {
   const [only, setOnly] = useState('all');
   const rows = S.features.filter((f) => only === 'all' || (only === 'missing' ? !f.implemented : f.implemented));
   return (
-    <section id="audit" className="card window reveal" data-title="claims-vs-code.audit — static scan">
+    <section id="audit" className="card window reveal" data-title="claims-vs-code.audit - static scan">
       <div className="head">
         <div>
           <p className="eyebrow">Static scan of index.html and README.md</p>
@@ -389,7 +389,7 @@ function Audit() {
             {rows.map((f) => (
                 <tr key={f.key}>
                   <td>{f.label}</td>
-                  <td>{f.readmeLine ? <a className="mono" href={blob('README.md', f.readmeLine)}>L{f.readmeLine}</a> : '—'}</td>
+                  <td>{f.readmeLine ? <a className="mono" href={blob('README.md', f.readmeLine)}>L{f.readmeLine}</a> : '-'}</td>
                   <td className="mono re">{FEATURE_RE[f.key].source}</td>
                   <td>{L(f.line)}</td>
                   <td><span className={`pill ${f.implemented ? 'good' : 'bad'}`}>{f.implemented ? 'Implemented' : 'Not implemented'}</span></td>
@@ -423,7 +423,7 @@ function Security() {
     s.tailwindCdn && { sev: 'warn', t: 'Tailwind dev CDN, unpinned', d: 'cdn.tailwindcss.com is the in-browser development build with no version pin.', line: s.tailwindCdn },
   ].filter(Boolean);
   return (
-    <section id="security" className="card window reveal" data-title="security.review — line-referenced">
+    <section id="security" className="card window reveal" data-title="security.review - line-referenced">
       <p className="eyebrow">Security and reliability review</p>
       <h2>What holds up, and what a hostile peer could exploit.</h2>
       <p className="sub">Every finding links to the line in <span className="mono">index.html</span> it was found at. {open.filter((o) => o.sev === 'bad').length} are serious, {open.filter((o) => o.sev === 'warn').length} are cautions. None has been exploited here; this is code review, not a penetration test.</p>
@@ -454,7 +454,7 @@ function Roadmap() {
     ['Pin and self-host CSS', 'Replace the Tailwind dev CDN with a built stylesheet; re-enable zoom.'],
   ];
   return (
-    <section id="roadmap" className="card window reveal" data-title="roadmap.md — status from the scan">
+    <section id="roadmap" className="card window reveal" data-title="roadmap.md - status from the scan">
       <p className="eyebrow">Roadmap</p>
       <h2>The README roadmap, with status taken from the code.</h2>
       <div className="grid2" style={{ marginTop: 16 }}>
